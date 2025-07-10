@@ -1,0 +1,5 @@
+# Ignore sensitive PDF, CSV, and input text files
+*.pdf
+*.csv
+*.txt
+!requirements.txt
