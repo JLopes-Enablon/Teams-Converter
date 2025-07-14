@@ -1,6 +1,7 @@
 ## Calendar Event Extractor
 
-This script extracts event information from a Teams calendar text export and saves it as a CSV file for easy use in Excel or other tools.
+This script extracts event information from a Teams calendar text/PDF export and saves it as a CSV file for easy use in Excel or other tools.
+When exportinng Teams calendaar, Print Calendar, choose timeframe (week / month) and tick the detailed agenda tick box.
 
 ### How to Use
 
@@ -28,4 +29,3 @@ Each row represents a calendar event.
 - Only events with a line format like `Event Name` followed by `Mon 07/07/25 09:00 - 09:30` are extracted.
 
 ---
-Created by GitHub Copilot
