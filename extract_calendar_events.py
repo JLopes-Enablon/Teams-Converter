@@ -41,20 +41,66 @@ else:
             lines = f.readlines()
 
 
+# Function to convert 12-hour time to 24-hour format
+def convert_to_24h(time_str):
+    """Convert time from '8:00 AM' to '08:00' format"""
+    if 'AM' in time_str or 'PM' in time_str:
+        time_part = time_str.replace(' AM', '').replace(' PM', '').strip()
+        hour, minute = time_part.split(':')
+        hour = int(hour)
+        
+        if 'PM' in time_str and hour != 12:
+            hour += 12
+        elif 'AM' in time_str and hour == 12:
+            hour = 0
+            
+        return f"{hour:02d}:{minute}"
+    return time_str
+
 # Regex to match event lines
-# Example: Azure Daily\nMon 07/07/25 09:00 - 09:30 or Mon 21/07/2025 09:30 - 09:55
-date_pattern = r'(\d{2}/\d{2}/(\d{2}|\d{4}))'
-event_line_regex = re.compile(r'([A-Za-z]{3}) ' + date_pattern + r' (\d{2}:\d{2}) - (\d{2}:\d{2})')
+# Handle both formats:
+# Format 1: Mon 07/07/25 09:00 - 09:30 (24-hour)
+# Format 2: Mon 10/6/25 8:00 AM - 8:30 AM (12-hour with AM/PM)
+date_pattern = r'(\d{1,2}/\d{1,2}/(\d{2}|\d{4}))'
+time_pattern_24h = r'(\d{1,2}:\d{2}) - (\d{1,2}:\d{2})'
+time_pattern_12h = r'(\d{1,2}:\d{2} (?:AM|PM)) - (\d{1,2}:\d{2} (?:AM|PM))'
+
+event_line_regex_24h = re.compile(r'([A-Za-z]{3}) ' + date_pattern + r' ' + time_pattern_24h)
+event_line_regex_12h = re.compile(r'([A-Za-z]{3}) ' + date_pattern + r' ' + time_pattern_12h)
 
 rows = []
-for i in range(len(lines) - 1):
-    summary = lines[i].strip()
-    match = event_line_regex.match(lines[i+1].strip())
-    if match and summary:
+for i in range(len(lines)):
+    line = lines[i].strip()
+    
+    # Try to match 24-hour format first
+    match = event_line_regex_24h.match(line)
+    if match:
         raw_date = match.group(2)
         start_time = match.group(4)
         end_time = match.group(5)
-        
+        # Look for summary in previous line or next line
+        summary = ""
+        if i > 0 and lines[i-1].strip() and not lines[i-1].strip().startswith(('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')):
+            summary = lines[i-1].strip()
+        elif i < len(lines) - 1 and lines[i+1].strip() and not lines[i+1].strip().startswith(('Location:', 'Organizer:', 'Required')):
+            summary = lines[i+1].strip()
+    else:
+        # Try to match 12-hour format
+        match = event_line_regex_12h.match(line)
+        if match:
+            raw_date = match.group(2)
+            start_time_12h = match.group(4)
+            end_time_12h = match.group(5)
+            start_time = convert_to_24h(start_time_12h)
+            end_time = convert_to_24h(end_time_12h)
+            # Look for summary in previous line or next line
+            summary = ""
+            if i > 0 and lines[i-1].strip() and not lines[i-1].strip().startswith(('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')):
+                summary = lines[i-1].strip()
+            elif i < len(lines) - 1 and lines[i+1].strip() and not lines[i+1].strip().startswith(('Location:', 'Organizer:', 'Required')):
+                summary = lines[i+1].strip()
+    
+    if match and summary:
         # Normalize date format to DD/MM/YYYY
         # Handle both DD/MM/YY and DD/MM/YYYY formats
         date_parts = raw_date.split('/')
@@ -66,7 +112,7 @@ for i in range(len(lines) - 1):
             year = f"20{year}"
         
         # Format as DD/MM/YYYY for consistency
-        normalized_date = f"{day}/{month}/{year}"
+        normalized_date = f"{day.zfill(2)}/{month.zfill(2)}/{year}"
         
         print(f"Matched event: Summary='{summary}', Date='{raw_date}' -> '{normalized_date}', Start='{start_time}', End='{end_time}'")
         rows.append([summary, normalized_date, start_time, end_time])
