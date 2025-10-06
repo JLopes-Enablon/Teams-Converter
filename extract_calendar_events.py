@@ -51,11 +51,25 @@ for i in range(len(lines) - 1):
     summary = lines[i].strip()
     match = event_line_regex.match(lines[i+1].strip())
     if match and summary:
-        start_date = match.group(2)
+        raw_date = match.group(2)
         start_time = match.group(4)
         end_time = match.group(5)
-        print(f"Matched event: Summary='{summary}', Date='{start_date}', Start='{start_time}', End='{end_time}'")
-        rows.append([summary, start_date, start_time, end_time])
+        
+        # Normalize date format to DD/MM/YYYY
+        # Handle both DD/MM/YY and DD/MM/YYYY formats
+        date_parts = raw_date.split('/')
+        day, month = date_parts[0], date_parts[1]
+        year = date_parts[2]
+        
+        # Convert 2-digit year to 4-digit year
+        if len(year) == 2:
+            year = f"20{year}"
+        
+        # Format as DD/MM/YYYY for consistency
+        normalized_date = f"{day}/{month}/{year}"
+        
+        print(f"Matched event: Summary='{summary}', Date='{raw_date}' -> '{normalized_date}', Start='{start_time}', End='{end_time}'")
+        rows.append([summary, normalized_date, start_time, end_time])
 
 with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
     writer = csv.writer(csvfile)
